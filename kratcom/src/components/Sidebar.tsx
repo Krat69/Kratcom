@@ -1,6 +1,5 @@
-import React from 'react';
-import { Channel, User } from '@/types';
-import { HashIcon } from '@/components/Icons';
+import { Channel, User } from '../types';
+import { HashIcon } from './Icons';
 
 interface SidebarProps {
   channels: Channel[];
