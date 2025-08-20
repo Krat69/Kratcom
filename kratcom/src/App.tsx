@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
-import { Sidebar } from '@/components/Sidebar';
-import { ChatWindow } from '@/components/ChatWindow';
-import useDatabase from '@/hooks/useDatabase';
-import { MenuIcon, CloseIcon } from '@/components/Icons';
+import { useState } from 'react';  // ← Sin React
+import { Sidebar } from './components/Sidebar';
+import { ChatWindow } from './components/ChatWindow';
+import { useDatabase } from './hooks/useDatabase';  // ← Ya correcto
+import { MenuIcon, CloseIcon } from './components/Icons';
 
 function App() {
   const { channels, users, getMessagesForChannel, addMessage } = useDatabase();
