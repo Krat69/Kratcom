@@ -22,7 +22,7 @@ function App() {
     addMessage(activeChannelId, currentUserId, text);
   };
 
-  const activeChannel = channels.find(c => c.id === activeChannelId);
+  const activeChannel = channels.find((c: Channel) => c.id === activeChannelId);
   const messagesForChannel = getMessagesForChannel(activeChannelId);
 
   return (
