@@ -1,21 +1,20 @@
-
-import { useState } from 'react';  // ← Sin React
+import { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatWindow } from './components/ChatWindow';
-import { useDatabase } from './hooks/useDatabase';  // ← Ya correcto
+import { useDatabase } from './hooks/useDatabase';
 import { MenuIcon, CloseIcon } from './components/Icons';
+import type { Channel } from './types';
 
 function App() {
   const { channels, users, getMessagesForChannel, addMessage } = useDatabase();
   const [activeChannelId, setActiveChannelId] = useState<string>(channels[0]?.id || '');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
-  // As a demo, we'll hardcode the current user. In a real app, this would come from auth.
   const currentUserId = '1';
 
   const handleSelectChannel = (id: string) => {
     setActiveChannelId(id);
-    setSidebarOpen(false); // Close sidebar on selection in mobile
+    setSidebarOpen(false);
   };
 
   const handleSendMessage = (text: string) => {
