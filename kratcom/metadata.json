@@ -1,0 +1,5 @@
+{
+  "name": "KratCom",
+  "description": "A real-time chat application inspired by Slack, built with React, TypeScript, and Tailwind CSS. It features channels, direct messages, and persistent storage using localStorage for a seamless user experience.",
+  "requestFramePermissions": []
+}
