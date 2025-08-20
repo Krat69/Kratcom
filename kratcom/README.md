@@ -16,3 +16,4 @@ Una aplicación de chat en tiempo real, construida con React, TypeScript y Tailw
 ```bash
 git clone https://github.com/tu-usuario/kratcom.git
 cd kratcom
+!-- Updated for Vercel fix -->
