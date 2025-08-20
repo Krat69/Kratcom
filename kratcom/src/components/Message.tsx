@@ -1,5 +1,4 @@
-import React from 'react';
-import { Message as MessageType, User } from '@/types';
+import { Message as MessageType, User } from '../types';
 
 interface MessageProps {
   message: MessageType;
