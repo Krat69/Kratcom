@@ -1,19 +1,34 @@
-# KratCom
+# KratCom / KRATION JURISPRUDENCIA
 
-Una aplicación de chat en tiempo real, construida con React, TypeScript y Tailwind CSS.
+Repositorio de apoyo para la configuración del GPT privado **KRATION JURISPRUDENCIA** de Cratias Asesores SLP.
 
-## Características
+## Configuración del GPT privado
 
-- 💬 Chat en tiempo real por canales
-- 📱 Diseño responsive para móviles y desktop
-- 📦 PWA (Aplicación Web Progresiva) instalable
-- 💾 Persistencia de datos con localStorage
-- 🎨 Interfaz moderna y intuitiva
+La configuración final lista para pegar en el GPT Builder está en:
 
-## Instalación
+- [`docs/KRATION_JURISPRUDENCIA_GPT.md`](docs/KRATION_JURISPRUDENCIA_GPT.md)
 
-1. Clona el repositorio:
+Incluye:
+
+- nombre y descripción del GPT;
+- instrucciones internas completas;
+- reglas anti-alucinación;
+- jerarquía jurisprudencial;
+- prioridad Canarias;
+- formatos de respuesta;
+- tratamiento de demandas, recursos, contestaciones e informes;
+- extracción de citas literales solo desde textos aportados o fuentes verificadas;
+- iniciadores de conversación;
+- prompt de prueba.
+
+## Aplicación existente
+
+La aplicación React incluida en este repositorio se conserva como base técnica, pero el alcance inmediato solicitado es el **GPT privado**, no una integración con Claude ni una app jurídica completa.
+
+## Comandos
+
 ```bash
-git clone https://github.com/tu-usuario/kratcom.git
-cd kratcom
-!-- Updated for Vercel fix -->
+npm install
+npm run build
+npm run dev
+```

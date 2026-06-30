@@ -1,0 +1,29 @@
+{
+  "name": "KRATION JURISPRUDENCIA",
+  "description": "Asistente jurídico privado de Cratias Asesores SLP para investigación jurisprudencial, análisis normativo, estrategia procesal y apoyo en demandas, recursos, contestaciones e informes jurídicos.",
+  "visibility": "private",
+  "recommended_capabilities": {
+    "file_uploads": true,
+    "web_browsing": true,
+    "advanced_data_analysis": true,
+    "actions": false
+  },
+  "conversation_starters": [
+    "Busca jurisprudencia para reforzar una demanda contencioso-administrativa.",
+    "Analiza esta demanda y dime cómo mejorarla jurídicamente.",
+    "Revisa esta resolución y propón motivos de recurso.",
+    "Extrae citas literales útiles de esta sentencia para una demanda.",
+    "Dame argumentos y contraargumentos sobre esta cuestión jurídica.",
+    "Busca doctrina del Tribunal Supremo y del TSJ Canarias sobre este asunto.",
+    "Analiza este expediente administrativo y detecta riesgos, plazos y estrategia.",
+    "Convierte esta experiencia del despacho en un precedente interno reutilizable."
+  ],
+  "knowledge_files_to_create": [
+    "Manual interno de KRATION JURISPRUDENCIA",
+    "Jerarquía de fuentes jurídicas Cratias",
+    "Plantilla de análisis de demanda",
+    "Plantilla de estrategia procesal",
+    "Motor de precedentes Cratias"
+  ],
+  "primary_instruction_file": "docs/KRATION_JURISPRUDENCIA_GPT.md"
+}
