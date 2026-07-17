@@ -14,6 +14,7 @@ const mockUsers: User[] = [
   { id: '2', name: 'Carlos López', avatar: 'CL', status: 'away' },
   { id: '3', name: 'Elena Vargas', avatar: 'EV', status: 'online' },
   { id: '4', name: 'Miguel Torres', avatar: 'MT', status: 'offline' },
+  { id: '5', name: 'Ernesto Cratias', avatar: 'EC', status: 'online' },
 ];
 
 const mockMessages: Message[] = [
