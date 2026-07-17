@@ -10,7 +10,7 @@ function App() {
   const [activeChannelId, setActiveChannelId] = useState<string>(channels[0]?.id || '');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
-  const currentUserId = '1';
+  const currentUserId = '5';
 
   const handleSelectChannel = (id: string) => {
     setActiveChannelId(id);
