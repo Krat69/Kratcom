@@ -1,5 +1,7 @@
 import { Channel, User } from '../types';
-import { HashIcon } from './Icons';
+import { HashIcon, ShieldIcon, ChatIcon } from './Icons';
+
+export type AppView = 'chat' | 'tasks';
 
 interface SidebarProps {
   channels: Channel[];
@@ -7,9 +9,11 @@ interface SidebarProps {
   activeChannelId: string;
   onSelectChannel: (channelId: string) => void;
   isOpen: boolean;
+  activeView: AppView;
+  onSelectView: (view: AppView) => void;
 }
 
-export function Sidebar({ channels, users, activeChannelId, onSelectChannel, isOpen }: SidebarProps) {
+export function Sidebar({ channels, users, activeChannelId, onSelectChannel, isOpen, activeView, onSelectView }: SidebarProps) {
   const getStatusColor = (status: User['status']) => {
     switch (status) {
       case 'online': return 'bg-green-500';
@@ -43,6 +47,46 @@ export function Sidebar({ channels, users, activeChannelId, onSelectChannel, isO
         </div>
         
         <div className="flex-1 overflow-y-auto">
+          <div className="p-4">
+            <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-2">
+              Espacios
+            </h2>
+            <ul className="space-y-1">
+              <li>
+                <button
+                  onClick={() => onSelectView('chat')}
+                  className={`
+                    w-full flex items-center px-2 py-1 text-left rounded
+                    transition-colors duration-150
+                    ${activeView === 'chat'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                    }
+                  `}
+                >
+                  <ChatIcon className="w-4 h-4 mr-2 flex-shrink-0" />
+                  <span className="truncate">Chat</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => onSelectView('tasks')}
+                  className={`
+                    w-full flex items-center px-2 py-1 text-left rounded
+                    transition-colors duration-150
+                    ${activeView === 'tasks'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                    }
+                  `}
+                >
+                  <ShieldIcon className="w-4 h-4 mr-2 flex-shrink-0" />
+                  <span className="truncate">Tareas privadas</span>
+                </button>
+              </li>
+            </ul>
+          </div>
+
           <div className="p-4">
             <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-2">
               Canales

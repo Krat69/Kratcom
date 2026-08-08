@@ -9,4 +9,8 @@ export default defineConfig({
       '@': resolve(__dirname, './src'),
     },
   },
+  build: {
+    // pdf.js (extracción local de PDF) usa sintaxis moderna (top-level await)
+    target: 'es2022',
+  },
 })
