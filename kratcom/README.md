@@ -1,52 +1,42 @@
 # KratCom
 
-Una aplicación de chat en tiempo real, construida con React, TypeScript y Tailwind CSS.
+Interfaz privada de IA: una PWA (React + TypeScript + Tailwind) para hablar con Claude y encargarle tareas con documentos, **sin que los datos personales salgan del dispositivo**.
 
 ## Características
 
-- 💬 Chat en tiempo real por canales
-- 📱 Diseño responsive para móviles y desktop
-- 📦 PWA (Aplicación Web Progresiva) instalable
-- 💾 Persistencia de datos con localStorage
-- 🎨 Interfaz moderna e intuitiva
-- 🔒 **Tareas privadas**: encarga tareas con documentos adjuntos sin que los datos personales salgan del teléfono
+- 🤖 **Conversaciones con la IA** (API de Claude vía SDK oficial, con streaming) — cada mensaje se seudonimiza en el dispositivo antes de enviarse y la respuesta se rehidrata localmente
+- 🔒 **Tareas privadas**: adjunta un documento, revisa exactamente qué saldrá del teléfono y envíalo anonimizado; si la IA está configurada, la tarea se completa automáticamente
+- 📄 Extracción local de PDF (pdf.js en el navegador) y formatos de texto
+- 📱 PWA instalable, diseño móvil primero
+- 🔑 La clave de API se guarda solo en el dispositivo
 
-## Tareas privadas: cómo se protegen los datos
+## Cómo se protegen los datos
 
-El flujo completo de una tarea está diseñado para que **ningún dato personal abandone el dispositivo**, en línea con el principio de minimización (art. 5.1.c RGPD) y la seudonimización (art. 4.5 RGPD):
+El flujo está diseñado para que **ningún dato personal abandone el dispositivo**, en línea con la minimización (art. 5.1.c RGPD) y la seudonimización (art. 4.5 RGPD):
 
-1. **Extracción local**: el documento adjunto (PDF o texto) se lee íntegramente en el navegador del teléfono — el PDF se procesa con pdf.js en local; el fichero original nunca se sube a ningún servidor.
+1. **Extracción local**: los documentos se leen íntegramente en el navegador; el fichero original nunca se sube.
 2. **Seudonimización en el dispositivo**: antes de enviar nada, un motor local detecta datos personales típicos de documentación española y los sustituye por tokens estables (`[[DNI_1]]`, `[[PERSONA_2]]`…):
    - Nombres de personas (fórmulas «D./Dña./Sr./Sra. …» y «NOMBRE APELLIDOS, con DNI…»)
    - DNI, NIE y NIF de empresa (con validación de la letra de control)
    - Nº de afiliación a la Seguridad Social, IBAN y tarjetas (con validación de dígitos de control/Luhn)
    - Teléfonos, emails, direcciones postales, códigos postales, matrículas, referencias catastrales y fechas de nacimiento
    - Términos protegidos definidos por el usuario (nombres de clientes, empresas…)
-3. **Bóveda cifrada local**: la correspondencia token → dato real se cifra con AES-GCM usando una clave **no extraíble** generada en el dispositivo (WebCrypto + IndexedDB). Ni la clave ni el mapeo se transmiten nunca; la propia tarea se guarda ya seudonimizada.
-4. **Revisión antes de enviar**: la app muestra exactamente el texto que va a salir del teléfono, con los datos protegidos resaltados, y permite añadir términos adicionales antes de confirmar.
-5. **Envío anonimizado**: la única salida de red de las tareas envía el texto ya seudonimizado (a un webhook configurable, o vía compartir/portapapeles). El servicio que ejecuta la tarea (un asistente de IA, una automatización…) trabaja solo con tokens.
-6. **Rehidratación local**: cuando llega la respuesta (que conserva los tokens), la app restituye los valores reales únicamente en la pantalla del dispositivo.
+3. **Bóveda cifrada local**: la correspondencia token → dato real se cifra con AES-GCM usando una clave **no extraíble** generada en el dispositivo (WebCrypto + IndexedDB). Ni la clave ni el mapeo se transmiten nunca; conversaciones y tareas se guardan ya seudonimizadas.
+4. **La IA solo ve tokens**: el system prompt le indica que conserve los tokens intactos; en pantalla puedes alternar entre «datos reales» (rehidratación local) y «lo enviado» (los tokens).
+5. **Tokens estables por conversación**: el mismo dato recibe siempre el mismo token dentro de una conversación, así la IA mantiene la coherencia sin conocer los valores.
 
-> Nota: la detección es heurística y prioriza redactar de más antes que filtrar de menos. Revisa siempre la vista previa antes de enviar y añade como «término protegido» cualquier dato que el motor no haya reconocido.
+> Nota: la detección es heurística y prioriza redactar de más antes que filtrar de menos. En las tareas privadas hay revisión obligatoria antes de enviar; añade como «término protegido» cualquier dato que el motor no reconozca.
+
+## Configuración
+
+Abre los ajustes (⚙️ en la barra lateral) e introduce tu clave de API de Anthropic (se guarda solo en el dispositivo). Modelo por defecto: Claude Opus 5. Para las tareas también puede configurarse un webhook alternativo; sin IA ni webhook, la tarea anonimizada se comparte o copia manualmente.
 
 ## Instalación
-
-1. Clona el repositorio:
 
 ```bash
 git clone https://github.com/krat69/kratcom.git
 cd kratcom
-```
-
-2. Instala las dependencias y arranca en desarrollo:
-
-```bash
 npm install
-npm run dev
-```
-
-3. Para compilar la versión de producción:
-
-```bash
-npm run build
+npm run dev     # desarrollo
+npm run build   # producción
 ```

@@ -1,25 +1,3 @@
-
-export interface User {
-  id: string;
-  name: string;
-  avatar: string;
-  status: 'online' | 'away' | 'offline';
-}
-
-export interface Channel {
-  id: string;
-  name: string;
-  description: string;
-}
-
-export interface Message {
-  id: string;
-  channelId: string;
-  userId: string;
-  text: string;
-  timestamp: string;
-}
-
 export type PiiType =
   | 'PERSONA'
   | 'DNI'
@@ -46,6 +24,23 @@ export interface DetectedEntity {
   token: string;
   type: PiiType;
   count: number;
+}
+
+// Un mensaje de conversación con la IA. text se guarda SIEMPRE
+// seudonimizado; los valores reales viven solo en la bóveda cifrada.
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  timestamp: string;
+  attachmentName?: string;
+}
+
+export interface Conversation {
+  id: string;
+  title: string;
+  createdAt: string;
+  messages: ChatMessage[];
 }
 
 export type TaskStatus = 'borrador' | 'enviada' | 'completada';

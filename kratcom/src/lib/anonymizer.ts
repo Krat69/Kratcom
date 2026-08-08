@@ -226,11 +226,25 @@ function normalizeValue(type: PiiType, value: string): string {
 
 const TOKEN_REGEX = /\[\[([A-Z_]+)_(\d+)\]\]/g;
 
-export function createAnonymizer(customTerms: CustomTerm[] = []) {
+export function createAnonymizer(
+  customTerms: CustomTerm[] = [],
+  // Mapeo previo (p. ej. de turnos anteriores de una conversación) para que
+  // el mismo dato reciba siempre el mismo token.
+  initialMapping: Record<string, string> = {}
+) {
   const mapping: Record<string, string> = {};
   const tokenByValue = new Map<string, string>();
   const counters: Partial<Record<PiiType, number>> = {};
   const occurrences = new Map<string, number>();
+
+  for (const [token, value] of Object.entries(initialMapping)) {
+    const type = tokenType(token);
+    const numberMatch = /_(\d+)\]\]$/.exec(token);
+    const n = numberMatch ? parseInt(numberMatch[1], 10) : 0;
+    counters[type] = Math.max(counters[type] ?? 0, n);
+    mapping[token] = value;
+    tokenByValue.set(`${type}:${normalizeValue(type, value)}`, token);
+  }
 
   function tokenFor(type: PiiType, value: string): string {
     const key = `${type}:${normalizeValue(type, value)}`;

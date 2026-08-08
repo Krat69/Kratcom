@@ -447,6 +447,16 @@ export function TasksPanel() {
   const sendTask = async (task: Task): Promise<string | null> => {
     try {
       const result = await dispatchTask(task);
+      if (result.method === 'ai' && result.responseText) {
+        // La IA respondió directamente (con los tokens intactos): la tarea
+        // queda completada y la respuesta se rehidrata solo en pantalla.
+        updateTask(task.id, {
+          status: 'completada',
+          sentAt: new Date().toISOString(),
+          response: result.responseText,
+        });
+        return 'La IA ha completado la tarea; respuesta rehidratada abajo.';
+      }
       updateTask(task.id, { status: 'enviada', sentAt: new Date().toISOString() });
       return result.method === 'webhook' ? null : `${result.detail}.`;
     } catch (err) {

@@ -1,4 +1,5 @@
 import type { Task } from '@/types';
+import { isAIConfigured, sendToAI } from '@/lib/ai';
 
 // Frontera de salida de la aplicación: esta es la ÚNICA función que envía
 // contenido de tareas fuera del dispositivo, y solo recibe el objeto Task,
@@ -39,16 +40,23 @@ export function buildOutboundPayload(task: Task): string {
     .join('\n');
 }
 
-export type DispatchMethod = 'webhook' | 'share' | 'clipboard';
+export type DispatchMethod = 'ai' | 'webhook' | 'share' | 'clipboard';
 
 export interface DispatchResult {
   method: DispatchMethod;
   detail: string;
+  // Presente solo en modo 'ai': la respuesta (aún seudonimizada) de la IA.
+  responseText?: string;
 }
 
 export async function dispatchTask(task: Task): Promise<DispatchResult> {
   const payload = buildOutboundPayload(task);
   const endpoint = getEndpoint();
+
+  if (isAIConfigured()) {
+    const responseText = await sendToAI([{ role: 'user', content: payload }]);
+    return { method: 'ai', detail: 'Procesada por la IA', responseText };
+  }
 
   if (endpoint) {
     const response = await fetch(endpoint, {
