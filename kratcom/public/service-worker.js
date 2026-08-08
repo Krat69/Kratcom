@@ -1,13 +1,16 @@
 // v2: network-first para las navegaciones (el HTML siempre llega fresco tras
 // cada despliegue) y cache-first solo para assets. La v1 servía cache-first
 // también el index.html, dejando a los usuarios atrapados en versiones viejas.
+// Las rutas se resuelven relativas al scope, así funciona igual en la raíz
+// de un dominio (Vercel) que bajo /Kratcom/ (GitHub Pages).
 const CACHE_NAME = 'kratcom-cache-v2';
+const BASE = new URL('./', self.location).pathname;
 const PRECACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192x192.png',
-  '/icon-512x512.png'
+  BASE,
+  BASE + 'index.html',
+  BASE + 'manifest.json',
+  BASE + 'icon-192x192.png',
+  BASE + 'icon-512x512.png'
 ];
 
 self.addEventListener('install', event => {
@@ -41,10 +44,10 @@ self.addEventListener('fetch', event => {
       fetch(request)
         .then(response => {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put('/index.html', copy));
+          caches.open(CACHE_NAME).then(cache => cache.put(BASE + 'index.html', copy));
           return response;
         })
-        .catch(() => caches.match('/index.html'))
+        .catch(() => caches.match(BASE + 'index.html'))
     );
     return;
   }
