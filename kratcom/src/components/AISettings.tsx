@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import { AI_MODELS, getAIConfig, setAIConfig } from '@/lib/ai';
+import {
+  AIProvider,
+  ANTHROPIC_MODELS,
+  GEMINI_MODELS,
+  getAIConfig,
+  setAIConfig,
+} from '@/lib/ai';
 import { getEndpoint, setEndpoint } from '@/lib/dispatch';
 import { CloseIcon, ShieldIcon } from '@/components/Icons';
 
@@ -17,48 +23,111 @@ export function AISettings({ onClose }: AISettingsProps) {
     onClose();
   };
 
+  const providerButton = (provider: AIProvider, label: string, sub: string) => (
+    <button
+      onClick={() => setConfig({ ...config, provider })}
+      className={`flex-1 px-3 py-2 rounded-lg border text-left ${
+        config.provider === provider
+          ? 'bg-blue-600/30 border-blue-500 text-white'
+          : 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500'
+      }`}
+    >
+      <span className="block text-sm font-medium">{label}</span>
+      <span className="block text-xs opacity-75">{sub}</span>
+    </button>
+  );
+
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-md bg-gray-800 border border-gray-700 rounded-xl p-5 space-y-4"
+        className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-gray-800 border border-gray-700 rounded-xl p-5 space-y-4"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white">Ajustes de la IA</h2>
+          <h2 className="text-lg font-bold text-white">Motor de IA</h2>
           <button onClick={onClose} className="p-1 text-gray-400 hover:text-white" aria-label="Cerrar">
             <CloseIcon className="w-5 h-5" />
           </button>
         </div>
 
-        <div>
-          <label className="block text-sm text-gray-300 mb-1">Clave de API de Anthropic</label>
-          <input
-            type="password"
-            value={config.apiKey}
-            onChange={e => setConfig({ ...config, apiKey: e.target.value })}
-            placeholder="sk-ant-..."
-            autoComplete="off"
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Se guarda únicamente en este dispositivo. Puedes crearla en console.anthropic.com.
-          </p>
+        <div className="flex gap-2">
+          {providerButton('gemini', 'Google Gemini', 'Gratis (franja gratuita)')}
+          {providerButton('anthropic', 'Claude', 'Mejor calidad · céntimos/uso')}
         </div>
 
-        <div>
-          <label className="block text-sm text-gray-300 mb-1">Modelo</label>
-          <select
-            value={config.model}
-            onChange={e => setConfig({ ...config, model: e.target.value })}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {AI_MODELS.map(model => (
-              <option key={model.id} value={model.id}>
-                {model.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {config.provider === 'gemini' ? (
+          <>
+            <div>
+              <label className="block text-sm text-gray-300 mb-1">Clave gratuita de Gemini</label>
+              <input
+                type="password"
+                value={config.geminiKey}
+                onChange={e => setConfig({ ...config, geminiKey: e.target.value })}
+                placeholder="AIza..."
+                autoComplete="off"
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Se crea gratis y sin tarjeta en{' '}
+                <a
+                  href="https://aistudio.google.com/apikey"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline text-gray-400"
+                >
+                  aistudio.google.com/apikey
+                </a>{' '}
+                (botón «Create API key»). Se guarda solo en este dispositivo.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-300 mb-1">Modelo</label>
+              <select
+                value={config.geminiModel}
+                onChange={e => setConfig({ ...config, geminiModel: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {GEMINI_MODELS.map(model => (
+                  <option key={model.id} value={model.id}>
+                    {model.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <label className="block text-sm text-gray-300 mb-1">Clave de API de Anthropic</label>
+              <input
+                type="password"
+                value={config.anthropicKey}
+                onChange={e => setConfig({ ...config, anthropicKey: e.target.value })}
+                placeholder="sk-ant-..."
+                autoComplete="off"
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Se crea en console.anthropic.com (requiere cargar saldo; se paga por uso). Se guarda
+                solo en este dispositivo.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-300 mb-1">Modelo</label>
+              <select
+                value={config.anthropicModel}
+                onChange={e => setConfig({ ...config, anthropicModel: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {ANTHROPIC_MODELS.map(model => (
+                  <option key={model.id} value={model.id}>
+                    {model.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
 
         <div>
           <label className="block text-sm text-gray-300 mb-1">
@@ -68,7 +137,7 @@ export function AISettings({ onClose }: AISettingsProps) {
             type="url"
             value={endpointDraft}
             onChange={e => setEndpointDraft(e.target.value)}
-            placeholder="https://... (vacío = usar la IA o compartir)"
+            placeholder="https://... (normalmente vacío)"
             className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -76,8 +145,9 @@ export function AISettings({ onClose }: AISettingsProps) {
         <div className="flex items-start bg-green-900/40 border border-green-700 rounded-lg p-3 text-xs text-green-200">
           <ShieldIcon className="w-4 h-4 mr-2 flex-shrink-0 mt-0.5" />
           <p>
-            La IA solo recibe texto seudonimizado: los datos personales se sustituyen por tokens en
-            tu dispositivo y los valores reales quedan cifrados aquí.
+            Con cualquiera de los dos motores, la IA solo recibe texto seudonimizado: los datos
+            personales se sustituyen por tokens en tu dispositivo y los valores reales quedan
+            cifrados aquí.
           </p>
         </div>
 

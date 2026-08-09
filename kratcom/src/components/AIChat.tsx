@@ -239,14 +239,13 @@ export function AIChat({
       </div>
 
       {!isAIConfigured() && !manualPayload && (
-        <div className="mx-4 mb-2 p-3 bg-gray-900 border border-gray-700 rounded-lg text-xs text-gray-300">
-          <span className="font-medium text-gray-200">Modo manual (gratis):</span> al enviar, tu
-          mensaje se anonimiza y se copia para pegarlo en tu app de Claude; luego traes aquí su
-          respuesta. Para respuestas automáticas,{' '}
-          <button onClick={onOpenSettings} className="underline">
-            configura una clave de API
-          </button>
-          .
+        <div className="mx-4 mb-2 p-3 bg-amber-900/30 border border-amber-800 rounded-lg text-xs text-amber-100">
+          <span className="font-medium">Para que la app responda sola:</span>{' '}
+          <button onClick={onOpenSettings} className="underline font-medium">
+            configura el motor de IA (⚙️)
+          </button>{' '}
+          — Gemini es gratis (clave sin tarjeta en 2 min). Mientras tanto, al enviar se activa el
+          modo copiar/pegar.
         </div>
       )}
 
