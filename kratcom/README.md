@@ -85,6 +85,7 @@ Son modelos pequeños: van bien para conversar, resumir y redactar borradores; n
 ## Desarrollo
 
 ```bash
+git clone --recurse-submodules https://github.com/Krat69/Kratcom.git
 npm install
 npm run dev          # navegador, con recarga en caliente
 npm test             # tests de la capa de memoria
@@ -100,25 +101,34 @@ npm run electron:dev # app de escritorio
 npm run electron:build   # AppImage y .deb en release/
 ```
 
+El plugin nativo trae llama.cpp como submódulo. Si clonaste sin `--recurse-submodules`:
+
+```bash
+git submodule update --init --recursive
+```
+
 ### Lo que hay que hacer en Xcode una vez
 
-El fichero `ios/App/App/App.entitlements` ya está creado y enlazado en el proyecto, pero el *entitlement* de memoria ampliada hay que activarlo también en la interfaz: **Signing & Capabilities → + Capability → Increased Memory Limit**. Sin él, iOS mata la app al cargar un modelo de ~1 GB.
+Dos cosas, ambas por una sola vez:
+
+1. Generar el framework de llama.cpp: `cd plugins/llama-native && ./scripts/build-ios-xcframework.sh` (tarda varios minutos y pide macOS con Xcode).
+2. Activar el *entitlement* de memoria ampliada en **Signing & Capabilities → + Capability → Increased Memory Limit**. El fichero `ios/App/App/App.entitlements` ya está creado y enlazado en el proyecto, pero sin activarlo en la interfaz iOS mata la app al cargar un modelo de ~1 GB.
 
 ## Estado
 
-Funcionando:
+Funcionando y verificado:
 
-- Motor WASM (llama.cpp en WebAssembly) en las cuatro plataformas.
-- Memoria completa: `memoria.md`, diarios, extracción, deduplicación, compactación, recuperación por relevancia y editor dentro de la app. 43 tests.
-- Motor nativo de escritorio (node-llama-cpp) a través del proceso principal de Electron.
-- Proyectos de Android y iOS generados y configurados.
+- **Motor nativo (llama.cpp)** en Android y en escritorio. El núcleo de inferencia está escrito una sola vez en C++ y lo comparten las dos plataformas; se ha probado ejecutando inferencia real contra un GGUF, no solo compilándolo. Detalles y estado de verificación en `docs/plugin-nativo.md`.
+- **Motor WASM** como respaldo universal, incluido el navegador.
+- **Memoria completa**: `memoria.md`, diarios, extracción, deduplicación, compactación, recuperación por relevancia y editor dentro de la app. 43 tests.
+- Proyectos de Android e iOS generados y configurados; APK de depuración compilando en CI.
 
 Pendiente:
 
-- **Plugin nativo `LlamaNative` para Android e iOS.** El contrato en TypeScript ya está escrito y el motor lo detecta y lo usa en cuanto exista (`src/lib/engine/native.ts`); falta el código nativo. Ver `docs/plugin-nativo.md`.
+- **Compilar el plugin en iOS.** El código Swift está escrito contra la misma fachada C que sí se ha probado, pero verificarlo requiere macOS con Xcode. Antes de abrir el proyecto hay que ejecutar una vez `plugins/llama-native/scripts/build-ios-xcframework.sh`.
 - Firmado y distribución (Play Store, TestFlight).
 
-Mientras el plugin no exista, en móvil se usa el motor WASM. Funciona, pero conviene saber por qué es lento: los hilos en WebAssembly necesitan `SharedArrayBuffer`, que exige aislamiento por origen (COOP/COEP), y Capacitor no permite añadir esas cabeceras a su servidor local. Dentro del WebView, por tanto, la inferencia va a **un solo hilo**. En Electron sí hay cabeceras propias y el WASM va multihilo.
+En el navegador, y en móvil si el plugin nativo no está compilado, se usa el motor WASM. Conviene saber por qué ahí va más lento: los hilos en WebAssembly necesitan `SharedArrayBuffer`, que exige aislamiento por origen (COOP/COEP), y Capacitor no permite añadir esas cabeceras a su servidor local, así que dentro del WebView la inferencia va a **un solo hilo**. En Electron sí hay cabeceras propias y el WASM va multihilo.
 
 ## Verificación
 

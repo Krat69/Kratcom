@@ -1,0 +1,8 @@
+# Salidas de compilación de Gradle y CMake
+android/build/
+android/.cxx/
+build/
+.build/
+
+# Artefactos de SwiftPM
+.swiftpm/

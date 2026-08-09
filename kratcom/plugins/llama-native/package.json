@@ -1,0 +1,15 @@
+{
+  "name": "kratcom-llama-native",
+  "version": "1.0.0",
+  "description": "Inferencia con llama.cpp nativo para KratCom (Android e iOS)",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": ["android/", "ios/", "shared/", "index.js", "index.d.ts", "KratcomLlamaNative.podspec"],
+  "capacitor": {
+    "android": { "src": "android" },
+    "ios": { "src": "ios" }
+  },
+  "peerDependencies": {
+    "@capacitor/core": ">=8.0.0"
+  }
+}

@@ -44,8 +44,14 @@ jobs:
   android:
     name: APK de depuración
     runs-on: ubuntu-latest
+    # Compila llama.cpp para arm64 con el NDK: tarda bastante más que el resto.
+    timeout-minutes: 45
     steps:
+      # El plugin nativo necesita el submódulo de llama.cpp, fijado a una
+      # etiqueta concreta. Sin esto, CMake aborta con un mensaje explícito.
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - uses: actions/setup-node@v4
         with:

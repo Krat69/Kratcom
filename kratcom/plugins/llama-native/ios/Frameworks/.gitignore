@@ -1,0 +1,3 @@
+# El xcframework lo genera scripts/build-ios-xcframework.sh y pesa cientos de
+# MB: se construye en local, no se versiona.
+*.xcframework/

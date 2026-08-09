@@ -173,11 +173,20 @@ export class NativeEngine implements LocalEngine {
     opts.signal?.addEventListener('abort', abort, { once: true });
 
     try {
-      if (bridge) {
-        return await bridge.generate(params, onToken);
+      const text = bridge
+        ? await bridge.generate(params, onToken)
+        : await (async () => {
+            this.tokenHandlers.set(requestId, onToken);
+            return (await LlamaNative.generate(params)).text;
+          })();
+
+      // El motor nativo devuelve el texto parcial cuando se cancela, mientras
+      // que el WASM lanza. Se unifica en lanzar: así una respuesta cortada a
+      // medias no acaba alimentando la memoria, que es lo que importa.
+      if (opts.signal?.aborted) {
+        throw new DOMException('Generación cancelada', 'AbortError');
       }
-      this.tokenHandlers.set(requestId, onToken);
-      const { text } = await LlamaNative.generate(params);
+
       return text || accumulated;
     } finally {
       this.tokenHandlers.delete(requestId);

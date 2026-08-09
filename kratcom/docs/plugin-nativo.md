@@ -1,52 +1,75 @@
-# Plugin nativo `LlamaNative` (Android e iOS)
+# Plugin nativo `LlamaNative`
 
-Trabajo pendiente. Todo el lado TypeScript ya está hecho: `src/lib/engine/native.ts` detecta el plugin, lo prefiere sobre el motor WASM y cae de vuelta al WASM si no está. En cuanto exista el código nativo, la app lo usa sin tocar ni una línea de la interfaz.
+Inferencia con llama.cpp compilado para el dispositivo, detrás del mismo contrato que el motor WebAssembly. `src/lib/engine/native.ts` lo detecta y lo prefiere automáticamente; si no está compilado, la app cae al WASM sin que la interfaz se entere.
 
-No está implementado aquí porque compilar llama.cpp para Android requiere el NDK y para iOS requiere Xcode, y escribir un binding JNI sin poder compilarlo ni ejecutarlo una sola vez sería entregar código que nadie ha visto funcionar.
-
-## Por qué merece la pena
+## Por qué existe
 
 Dentro del WebView, el motor WASM va a un solo hilo: `SharedArrayBuffer` necesita aislamiento por origen (COOP + COEP) y Capacitor no permite añadir cabeceras a su servidor local. El plugin nativo no pasa por el WebView, así que usa todos los núcleos y, en iPhone, Metal.
 
-Orden de magnitud para un modelo de 1B cuantizado Q4 en un móvil reciente: unos 5-8 tokens/s en WASM monohilo frente a 20-30 tokens/s nativo.
+## Cómo está montado
 
-## Contrato que hay que implementar
-
-Es el de `LlamaNativePlugin` en `src/lib/engine/native.ts`:
-
-```ts
-load({ modelPath: string, contextSize: number, threads: number, gpuLayers: number }): Promise<void>
-generate({ requestId: string, messages: EngineMessage[], maxTokens: number, temperature: number }): Promise<{ text: string }>
-abort({ requestId: string }): Promise<void>
-unload(): Promise<void>
-addListener('token', ({ requestId, token }) => void)
+```
+plugins/llama-native/
+  shared/
+    include/kratcom_llama.h    fachada en C
+    kratcom_llama.cpp          TODA la lógica de inferencia
+  android/
+    src/main/cpp/
+      jni_bridge.cpp           traducción JNI, sin lógica
+      CMakeLists.txt
+      llama.cpp/               submódulo, fijado en b10333
+    src/main/java/…/           LlamaBridge.java + LlamaNativePlugin.java
+  ios/
+    Sources/LlamaNativePlugin/ LlamaSession.swift + LlamaNativePlugin.swift
+    Frameworks/                llama.xcframework (generado, no versionado)
+  Package.swift
+  scripts/build-ios-xcframework.sh
 ```
 
-Detalles que importan:
+La lógica de llama.cpp está escrita **una sola vez**, en `shared/kratcom_llama.cpp`. Android e iOS compilan ese mismo fichero; lo que cambia es solo el envoltorio. La fachada es C y no C++ porque JNI habla C sin fricción y Swift puede importar una cabecera C directamente.
 
-- **`modelPath` llega ya resuelto.** La descarga y la caché las hace la app (`src/lib/engine/download.ts`, con `@capacitor/file-transfer`). El plugin solo abre un fichero que ya está en el disco.
-- **Los tokens se emiten por evento**, etiquetados con su `requestId`, porque el chat y la consolidación de la memoria pueden generar a la vez y su texto no debe mezclarse.
-- **`gpuLayers: 0` significa CPU pura**, y hay que respetarlo: es el ajuste «solo CPU» de la pantalla de ajustes, que existe para dispositivos con controladores gráficos problemáticos.
-- La plantilla de chat sale del propio GGUF (`chat_template`); no conviene reimplementarla a mano.
+Decisiones que conviene conocer:
 
-## Android
+- **La plantilla de chat sale del GGUF** (`llama_model_chat_template`), no está escrita a mano. Cada familia de modelos espera sus propios marcadores y reimplementarlos es la vía rápida a respuestas raras.
+- **Cada generación limpia la caché KV.** El historial completo viaja en `messages` desde el lado JavaScript, así que reutilizar el contexto anterior mezclaría conversaciones.
+- **Las generaciones se serializan.** El contexto de llama.cpp no admite decodificaciones concurrentes; dos peticiones a la vez —el chat y la consolidación de la memoria— se encolan en lugar de corromperse.
+- **`gpuLayers: 0` es CPU pura** y se respeta: es el ajuste «solo CPU» de la pantalla de ajustes, para dispositivos con controladores gráficos problemáticos.
+- **Cancelar no es un error.** `kratcom_llama_stop` devuelve 1 y conserva lo ya generado.
 
-- llama.cpp como submódulo de git, compilado con CMake y el NDK para `arm64-v8a`. `armeabi-v7a` no compensa: un dispositivo de 32 bits no va a mover estos modelos.
-- **Alineación de páginas de 16 KB.** Google Play ya la exige para Android 15+; si el `.so` no la cumple, la subida se rechaza. Se consigue con `-Wl,-z,max-page-size=16384`.
-- Conviene activar las extensiones de CPU disponibles (`LLAMA_NATIVE=OFF` más los flags de NEON/dotprod correspondientes) y comprobar el resultado en un dispositivo real, no en el emulador.
+## Estado de verificación
 
-## iOS
+| Qué | Cómo se comprobó |
+|---|---|
+| El núcleo compila contra la API real de llama.cpp | `g++ -fsyntax-only` contra las cabeceras de b10333 |
+| La librería arm64 enlaza | CMake + NDK r27c → `libkratcom_llama.so`, ELF aarch64 |
+| Los cinco símbolos JNI se exportan | `llvm-nm -D` sobre el `.so` |
+| Alineación de páginas de 16 KB (la exige Google Play) | `llvm-readelf -l` → `LOAD align 0x4000` |
+| **La inferencia funciona de verdad** | Arnés nativo con Qwen 2.5 0.5B: responde «Paris» a la capital de Francia, corta sola por EOG, la segunda generación no arrastra la anterior, y la cancelación devuelve 1 conservando el texto |
+| El APK integra el plugin | `gradlew assembleDebug` con el plugin sincronizado, también en CI |
 
-- llama.cpp trae `build-xcframework.sh`, que produce un `llama.xcframework` listo para enlazar. Es preferible a añadir los fuentes al proyecto.
-- Envoltorio en Swift, con los tokens emitidos por `notifyListeners`.
-- El *entitlement* `com.apple.developer.kernel.increased-memory-limit` ya está en `ios/App/App/App.entitlements` y enlazado en el proyecto, pero hay que activarlo también en **Signing & Capabilities**.
-- El simulador no sirve para medir: ni la memoria ni Metal se comportan como en el dispositivo.
+**Lo que no está verificado: iOS.** El código Swift usa exactamente la misma fachada C que sí se ha probado, pero compilarlo requiere macOS con Xcode. Antes de abrir el proyecto hay que generar el framework una vez:
 
-## Cómo comprobar que funciona
+```bash
+cd kratcom/plugins/llama-native
+./scripts/build-ios-xcframework.sh   # tarda varios minutos
+```
 
-1. `Capacitor.isPluginAvailable('LlamaNative')` devuelve `true` en el dispositivo.
-2. En Ajustes, «Motor en uso» pasa de *WebAssembly* a *llama.cpp nativo*.
-3. La respuesta aparece token a token, no de golpe al final.
-4. El botón «Parar» del chat interrumpe la generación de verdad.
-5. Con «Solo CPU» activado, el consumo de GPU cae a cero.
-6. Modo avión: todo sigue funcionando con el modelo ya descargado.
+Y activar en Xcode **Signing & Capabilities → Increased Memory Limit**, sin lo cual iOS mata la app al cargar un modelo de ~1 GB.
+
+## Trabajar con el submódulo
+
+```bash
+git submodule update --init --recursive
+```
+
+Sin él, CMake aborta con un mensaje explícito en vez de fallar de forma críptica. Para subir de versión: entrar en el submódulo, `git checkout <etiqueta>`, volver y confirmar el cambio de puntero. Al cambiar la versión hay que regenerar el xcframework de iOS.
+
+Solo se compila `arm64-v8a`. Un dispositivo de 32 bits no mueve estos modelos, y compilar para `armeabi-v7a` duplicaría el tiempo de build a cambio de una variante que nadie usaría.
+
+## Comprobación en un dispositivo real
+
+1. En Ajustes, «Motor en uso» debe decir *llama.cpp nativo* y no *WebAssembly*.
+2. La respuesta aparece token a token, no de golpe al final.
+3. El botón «Parar» corta de verdad y conserva lo escrito.
+4. Con «Solo CPU» activado, el consumo de GPU cae a cero.
+5. En modo avión, con el modelo ya descargado, todo sigue funcionando.
