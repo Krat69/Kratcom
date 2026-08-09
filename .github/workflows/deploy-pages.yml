@@ -1,10 +1,19 @@
 name: Desplegar en GitHub Pages
 
+# Solo desde la rama por defecto, y por dos razones:
+#
+#   1. El entorno github-pages tiene la protección estándar que rechaza
+#      cualquier otra rama, así que un disparador de rama es un fallo
+#      garantizado (histórico: todo lo lanzado desde main pasa, todo lo
+#      lanzado desde una rama falla en dos segundos y sin logs).
+#   2. Aunque se levantara esa protección, publicar una rama en Pages
+#      sobrescribiría el sitio en producción con código sin revisar.
+#
+# Las vistas previas por rama ya las genera Vercel en cada pull request.
 on:
   push:
     branches:
       - main
-      - claude/multiplatform-local-ai-app-x6yleh
   workflow_dispatch:
 
 permissions:
