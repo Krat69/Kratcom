@@ -1,7 +1,7 @@
 import type { Conversation } from '@/types';
-import { ChatIcon, GearIcon, PlusIcon, ShieldIcon, TrashIcon } from '@/components/Icons';
+import { BookIcon, ChatIcon, GearIcon, PlusIcon, ShieldIcon, TrashIcon } from '@/components/Icons';
 
-export type AppView = 'chat' | 'tasks';
+export type AppView = 'chat' | 'tasks' | 'memory';
 
 interface SidebarProps {
   conversations: Conversation[];
@@ -12,6 +12,7 @@ interface SidebarProps {
   onNewConversation: () => void;
   onDeleteConversation: (id: string) => void;
   onSelectTasks: () => void;
+  onSelectMemory: () => void;
   onOpenSettings: () => void;
 }
 
@@ -24,6 +25,7 @@ export function Sidebar({
   onNewConversation,
   onDeleteConversation,
   onSelectTasks,
+  onSelectMemory,
   onOpenSettings,
 }: SidebarProps) {
   return (
@@ -47,7 +49,7 @@ export function Sidebar({
     >
       <div className="p-4 border-b border-gray-700">
         <h1 className="text-xl font-bold text-white">KratCom</h1>
-        <p className="text-sm text-gray-400">Interfaz privada de IA</p>
+        <p className="text-sm text-gray-400">IA local con memoria</p>
       </div>
 
       <div className="p-4 pb-2">
@@ -116,6 +118,20 @@ export function Sidebar({
             <ShieldIcon className="w-4 h-4 mr-2 flex-shrink-0" />
             <span className="truncate text-sm">Tareas privadas</span>
           </button>
+          <button
+            onClick={onSelectMemory}
+            className={`
+              mt-1 w-full flex items-center px-2 py-1.5 text-left rounded
+              transition-colors duration-150
+              ${activeView === 'memory'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              }
+            `}
+          >
+            <BookIcon className="w-4 h-4 mr-2 flex-shrink-0" />
+            <span className="truncate text-sm">Memoria</span>
+          </button>
         </div>
       </div>
 
@@ -124,7 +140,7 @@ export function Sidebar({
           <div className="flex items-center min-w-0">
             <ShieldIcon className="w-5 h-5 text-green-400 flex-shrink-0" />
             <p className="ml-2 text-xs text-gray-400">
-              Los datos personales nunca salen de este dispositivo
+              IA local: nada sale de este dispositivo
             </p>
           </div>
           <button

@@ -3,14 +3,14 @@ import type { CustomTerm, DetectedEntity, Task } from '@/types';
 import { useTasks } from '@/hooks/useTasks';
 import { createAnonymizer, deanonymize } from '@/lib/anonymizer';
 import { extractText } from '@/lib/extractText';
-import { dispatchTask, getEndpoint, setEndpoint } from '@/lib/dispatch';
+import { runTaskLocally } from '@/lib/tasks';
 import { loadCustomTerms, loadMapping, saveCustomTerms, saveMapping } from '@/lib/vault';
 import { TokenText, TYPE_LABELS } from '@/components/TokenText';
+import { EngineStatusBanner } from '@/components/EngineStatus';
 import {
   ArrowLeftIcon,
   EyeIcon,
   EyeOffIcon,
-  GearIcon,
   PlusIcon,
   ShieldIcon,
   TrashIcon,
@@ -438,29 +438,23 @@ export function TasksPanel() {
   const { tasks, addTask, updateTask, deleteTask } = useTasks();
   const [view, setView] = useState<'list' | 'new' | 'detail'>('list');
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
-  const [endpointDraft, setEndpointDraft] = useState(getEndpoint);
   const [detailNotice, setDetailNotice] = useState<string | null>(null);
 
   const activeTask = tasks.find(t => t.id === activeTaskId);
 
+  // «Enviar» ya no envía nada a ninguna parte: la tarea la resuelve el modelo
+  // que corre en este mismo dispositivo.
   const sendTask = async (task: Task): Promise<string | null> => {
     try {
-      const result = await dispatchTask(task);
-      if (result.method === 'ai' && result.responseText) {
-        // La IA respondió directamente (con los tokens intactos): la tarea
-        // queda completada y la respuesta se rehidrata solo en pantalla.
-        updateTask(task.id, {
-          status: 'completada',
-          sentAt: new Date().toISOString(),
-          response: result.responseText,
-        });
-        return 'La IA ha completado la tarea; respuesta rehidratada abajo.';
-      }
-      updateTask(task.id, { status: 'enviada', sentAt: new Date().toISOString() });
-      return result.method === 'webhook' ? null : `${result.detail}.`;
+      const { responseText } = await runTaskLocally(task);
+      updateTask(task.id, {
+        status: 'completada',
+        sentAt: new Date().toISOString(),
+        response: responseText,
+      });
+      return 'Resuelta por la IA de este dispositivo.';
     } catch (err) {
-      return err instanceof Error ? `No se pudo enviar: ${err.message}` : 'No se pudo enviar';
+      return err instanceof Error ? `No se pudo procesar: ${err.message}` : 'No se pudo procesar';
     }
   };
 
@@ -519,50 +513,15 @@ export function TasksPanel() {
 
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center">
-          <ShieldIcon className="w-6 h-6 mr-2 text-green-400" />
-          <div>
-            <h2 className="text-lg font-bold text-white">Tareas privadas</h2>
-            <p className="text-xs text-gray-400">Los datos personales nunca salen del teléfono</p>
-          </div>
+      <div className="flex items-center">
+        <ShieldIcon className="w-6 h-6 mr-2 text-green-400" />
+        <div>
+          <h2 className="text-lg font-bold text-white">Tareas privadas</h2>
+          <p className="text-xs text-gray-400">Las resuelve la IA de este dispositivo</p>
         </div>
-        <button
-          onClick={() => setShowSettings(!showSettings)}
-          className="p-2 text-gray-400 hover:text-white"
-          aria-label="Configurar destino de envío"
-        >
-          <GearIcon className="w-5 h-5" />
-        </button>
       </div>
 
-      {showSettings && (
-        <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 space-y-2">
-          <label className="block text-sm text-gray-300">
-            Endpoint de envío (webhook de tu automatización o asistente)
-          </label>
-          <input
-            type="url"
-            value={endpointDraft}
-            onChange={e => setEndpointDraft(e.target.value)}
-            placeholder="https://... (vacío = compartir/copiar manualmente)"
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            onClick={() => {
-              setEndpoint(endpointDraft);
-              setShowSettings(false);
-            }}
-            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm text-white"
-          >
-            Guardar
-          </button>
-          <p className="text-xs text-gray-500">
-            Al endpoint solo llega la versión anonimizada de cada tarea; los valores reales quedan
-            cifrados en este dispositivo.
-          </p>
-        </div>
-      )}
+      <EngineStatusBanner />
 
       <button
         onClick={() => setView('new')}

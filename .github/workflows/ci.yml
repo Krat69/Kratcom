@@ -1,0 +1,76 @@
+name: Verificación
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/**'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verificar:
+    name: Tipos, tests y build web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: kratcom/package-lock.json
+
+      # --no-optional: node-llama-cpp compila binarios nativos y solo hace
+      # falta para el motor de escritorio. Lo que se verifica aquí es la
+      # lógica compartida, que no depende de él.
+      - name: Instalar dependencias
+        run: npm ci --no-optional
+        working-directory: kratcom
+
+      - name: Comprobar tipos
+        run: npx tsc --noEmit
+        working-directory: kratcom
+
+      - name: Tests de la memoria
+        run: npm test
+        working-directory: kratcom
+
+      - name: Compilar
+        run: npm run build
+        working-directory: kratcom
+
+  android:
+    name: APK de depuración
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: kratcom/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Instalar dependencias
+        run: npm ci --no-optional
+        working-directory: kratcom
+
+      - name: Compilar y sincronizar con Android
+        run: npm run sync
+        working-directory: kratcom
+
+      - name: Ensamblar APK
+        run: ./gradlew assembleDebug --no-daemon
+        working-directory: kratcom/android
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kratcom-debug-apk
+          path: kratcom/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

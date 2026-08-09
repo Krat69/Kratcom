@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Sidebar, AppView } from './components/Sidebar';
 import { AIChat } from './components/AIChat';
 import { AISettings } from './components/AISettings';
 import { TasksPanel } from './components/TasksPanel';
+import { MemoryPanel } from './components/MemoryPanel';
 import { useConversations } from './hooks/useConversations';
+import { purgeLegacyCloudConfig } from './lib/engine/config';
 import { MenuIcon, CloseIcon, ShieldIcon, PlusIcon } from './components/Icons';
 
 function App() {
@@ -21,6 +23,10 @@ function App() {
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Restos de la etapa en la que la app hablaba con Gemini y con Claude: si
+  // quedó alguna clave guardada, se borra. Ya no hay ninguna ruta de salida.
+  useEffect(purgeLegacyCloudConfig, []);
 
   const activeConversation =
     conversations.find(c => c.id === activeConversationId) ?? null;
@@ -43,8 +49,17 @@ function App() {
     if (activeConversationId === id) setActiveConversationId(null);
   };
 
+  const selectView = (next: AppView) => {
+    setView(next);
+    setSidebarOpen(false);
+  };
+
   const headerTitle =
-    view === 'tasks' ? 'Tareas privadas' : activeConversation?.title ?? 'KratCom';
+    view === 'tasks'
+      ? 'Tareas privadas'
+      : view === 'memory'
+        ? 'Memoria'
+        : activeConversation?.title ?? 'KratCom';
 
   return (
     <div className="h-screen w-screen bg-gray-800 text-white flex overflow-hidden">
@@ -56,10 +71,8 @@ function App() {
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
         onDeleteConversation={handleDeleteConversation}
-        onSelectTasks={() => {
-          setView('tasks');
-          setSidebarOpen(false);
-        }}
+        onSelectTasks={() => selectView('tasks')}
+        onSelectMemory={() => selectView('memory')}
         onOpenSettings={() => {
           setSettingsOpen(true);
           setSidebarOpen(false);
@@ -86,6 +99,8 @@ function App() {
         <div className="flex-1 flex flex-col min-h-0">
           {view === 'tasks' ? (
             <TasksPanel />
+          ) : view === 'memory' ? (
+            <MemoryPanel />
           ) : activeConversation ? (
             <AIChat
               conversation={activeConversation}
@@ -93,16 +108,17 @@ function App() {
               updateMessage={updateMessage}
               removeMessage={removeMessage}
               onOpenSettings={() => setSettingsOpen(true)}
+              onOpenMemory={() => selectView('memory')}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center p-6">
               <div className="text-center max-w-md space-y-4">
                 <ShieldIcon className="w-14 h-14 mx-auto text-green-500" />
-                <h2 className="text-xl font-bold text-white">KratCom · Interfaz privada de IA</h2>
+                <h2 className="text-xl font-bold text-white">KratCom · IA local con memoria</h2>
                 <p className="text-sm text-gray-400">
-                  Habla con la IA o encárgale tareas con documentos. Los datos personales se
-                  seudonimizan en tu dispositivo antes de salir, y las respuestas se rehidratan
-                  localmente: la IA nunca ve a quién se refieren.
+                  El modelo se ejecuta con el procesador de este dispositivo, sin servidores ni
+                  cuentas. Lo que importe de vuestras conversaciones se va acumulando en un fichero
+                  Markdown que puedes leer, editar y borrar cuando quieras.
                 </p>
                 <button
                   onClick={handleNewConversation}

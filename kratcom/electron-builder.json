@@ -1,0 +1,18 @@
+{
+  "appId": "es.cratias.kratcom",
+  "productName": "KratCom",
+  "directories": { "output": "release" },
+  "files": ["dist/**/*", "electron/**/*", "package.json"],
+  "asarUnpack": [
+    "**/node_modules/node-llama-cpp/**",
+    "**/node_modules/@node-llama-cpp/**"
+  ],
+  "linux": {
+    "target": ["AppImage", "deb"],
+    "category": "Utility",
+    "synopsis": "IA local con memoria persistente en Markdown",
+    "description": "Asistente de IA que se ejecuta íntegramente en tu ordenador y acumula su memoria en ficheros Markdown que puedes leer y editar."
+  },
+  "mac": { "target": ["dmg"], "category": "public.app-category.productivity" },
+  "win": { "target": ["nsis"] }
+}

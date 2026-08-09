@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">KratCom</string>
+    <string name="title_activity_main">KratCom</string>
+    <string name="package_name">es.cratias.kratcom</string>
+    <string name="custom_url_scheme">es.cratias.kratcom</string>
+</resources>

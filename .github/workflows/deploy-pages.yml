@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - claude/mobile-tasks-local-privacy-gv41w9
+      - claude/multiplatform-local-ai-app-x6yleh
   workflow_dispatch:
 
 permissions:
@@ -32,7 +32,7 @@ jobs:
           cache-dependency-path: kratcom/package-lock.json
 
       - name: Instalar dependencias
-        run: npm ci
+        run: npm ci --no-optional
         working-directory: kratcom
 
       - name: Compilar

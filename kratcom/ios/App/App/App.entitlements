@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Sin este entitlement, iOS mata la app al cargar el modelo: el límite de
+	  memoria por proceso se queda corto para un GGUF de ~1 GB más su caché de
+	  contexto. Hay que activarlo también en Xcode (Signing & Capabilities >
+	  Increased Memory Limit) para que quede en el perfil de aprovisionamiento.
+	-->
+	<key>com.apple.developer.kernel.increased-memory-limit</key>
+	<true/>
+</dict>
+</plist>

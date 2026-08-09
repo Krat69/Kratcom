@@ -1,5 +1,5 @@
 {
   "name": "KratCom",
-  "description": "A real-time chat application inspired by Slack, built with React, TypeScript, and Tailwind CSS. It features channels, direct messages, and persistent storage using localStorage for a seamless user experience.",
+  "description": "IA local con memoria persistente en Markdown. Un modelo pequeño se ejecuta íntegramente en el dispositivo (Android, iPhone y Linux) y acumula lo que aprende en ficheros .md que el usuario puede leer y editar. Sin servidores, sin cuentas y sin claves de API.",
   "requestFramePermissions": []
 }
