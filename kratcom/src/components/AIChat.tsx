@@ -122,8 +122,10 @@ export function AIChat({
         .map(m => ({ role: m.role, content: m.text }));
 
       try {
-        const finalText = await sendToAI(history, accumulated =>
-          updateMessage(conversation.id, assistantId, accumulated)
+        const finalText = await sendToAI(
+          history,
+          accumulated => updateMessage(conversation.id, assistantId, accumulated),
+          newMapping
         );
         updateMessage(conversation.id, assistantId, finalText);
       } catch (err) {

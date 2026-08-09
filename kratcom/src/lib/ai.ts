@@ -5,17 +5,26 @@
 // anonimizan antes de invocar sendToAI, y las claves se guardan únicamente en
 // este dispositivo.
 
+import { deanonymize, reapplyTokens } from '@/lib/anonymizer';
+
 const CONFIG_KEY = 'kratcom-ai-config';
 
-export type AIProvider = 'gemini' | 'anthropic';
+export type AIProvider = 'local' | 'gemini' | 'anthropic';
 
 export interface AIConfig {
   provider: AIProvider;
+  localModel: string;
   geminiKey: string;
   geminiModel: string;
   anthropicKey: string;
   anthropicModel: string;
 }
+
+export const LOCAL_MODELS = [
+  { id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC', label: 'Llama 3.2 1B (~0,9 GB, recomendado)' },
+  { id: 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC', label: 'Qwen 2.5 1.5B (~1,6 GB, mejor calidad)' },
+  { id: 'Llama-3.2-3B-Instruct-q4f16_1-MLC', label: 'Llama 3.2 3B (~2,3 GB, móviles potentes)' },
+];
 
 export const GEMINI_MODELS = [
   { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (gratis, recomendado)' },
@@ -29,7 +38,8 @@ export const ANTHROPIC_MODELS = [
 ];
 
 const DEFAULTS: AIConfig = {
-  provider: 'gemini',
+  provider: 'local',
+  localModel: 'Llama-3.2-1B-Instruct-q4f16_1-MLC',
   geminiKey: '',
   geminiModel: 'gemini-2.5-flash',
   anthropicKey: '',
@@ -69,7 +79,13 @@ export function setAIConfig(config: AIConfig): void {
 
 export function isAIConfigured(): boolean {
   const config = getAIConfig();
+  if (config.provider === 'local') return true; // no necesita clave
   return config.provider === 'gemini' ? !!config.geminiKey : !!config.anthropicKey;
+}
+
+// ¿Soporta este navegador la IA 100% local (WebGPU)?
+export function isLocalAISupported(): boolean {
+  return typeof navigator !== 'undefined' && 'gpu' in navigator;
 }
 
 const SYSTEM_PROMPT = `Eres el asistente de KratCom, una interfaz privada de IA. El dispositivo del usuario seudonimiza los datos personales antes de enviarte nada: los tokens con formato [[TIPO_n]] (por ejemplo [[PERSONA_1]], [[DNI_2]], [[IBAN_1]]) sustituyen nombres, identificadores, cuentas, direcciones y otros datos personales reales que tú nunca conoces.
@@ -96,6 +112,70 @@ export function buildManualPayload(anonymizedText: string): string {
     '\n\n(NOTA: los tokens con formato [[TIPO_n]] sustituyen datos personales ' +
     'seudonimizados en mi dispositivo. Consérvalos EXACTAMENTE igual en tu respuesta.)'
   );
+}
+
+// Motor 100% local (WebLLM + WebGPU): el modelo se descarga una vez, se
+// cachea en el navegador y la inferencia ocurre íntegramente en el
+// dispositivo. Como nada sale del teléfono, trabaja con los datos REALES
+// (rehidratados con el mapeo) — un modelo pequeño se maneja mejor con texto
+// natural que con tokens — y la respuesta se vuelve a seudonimizar antes de
+// devolverla, para que el almacenamiento siga sin datos en claro.
+const LOCAL_SYSTEM_PROMPT =
+  'Eres un asistente útil, claro y conciso. Responde siempre en el idioma del usuario (normalmente español).';
+
+let localEngine: { model: string; engine: { chat: { completions: { create: Function } }; unload?: () => Promise<void> } } | null = null;
+
+async function sendToLocal(
+  messages: AIMessage[],
+  config: AIConfig,
+  onText?: (accumulated: string) => void,
+  mapping?: Record<string, string>
+): Promise<string> {
+  if (!isLocalAISupported()) {
+    throw new Error(
+      'Este navegador no soporta la IA local (WebGPU). En iPhone necesitas iOS 26 o superior; en Android, Chrome actualizado. Alternativa: motor Gemini (gratis) en ajustes.'
+    );
+  }
+
+  if (localEngine && localEngine.model !== config.localModel) {
+    try {
+      await localEngine.engine.unload?.();
+    } catch {
+      // sin consecuencias: se crea un motor nuevo
+    }
+    localEngine = null;
+  }
+
+  if (!localEngine) {
+    const webllm = await import('@mlc-ai/web-llm');
+    const engine = await webllm.CreateMLCEngine(config.localModel, {
+      initProgressCallback: progress => {
+        const percent = Math.round((progress.progress ?? 0) * 100);
+        onText?.(
+          `⏳ Preparando la IA local… ${percent}%\n(la primera vez descarga el modelo; después queda guardado en el dispositivo)`
+        );
+      },
+    });
+    localEngine = { model: config.localModel, engine };
+  }
+
+  const rehydrated = mapping
+    ? messages.map(m => ({ ...m, content: deanonymize(m.content, mapping) }))
+    : messages;
+
+  const chunks = await localEngine.engine.chat.completions.create({
+    messages: [{ role: 'system', content: LOCAL_SYSTEM_PROMPT }, ...rehydrated],
+    stream: true,
+  });
+
+  let accumulated = '';
+  for await (const chunk of chunks) {
+    accumulated += chunk?.choices?.[0]?.delta?.content ?? '';
+    onText?.(mapping ? reapplyTokens(accumulated, mapping) : accumulated);
+  }
+
+  if (!accumulated) throw new Error('La IA local devolvió una respuesta vacía');
+  return mapping ? reapplyTokens(accumulated, mapping) : accumulated;
 }
 
 async function sendToGemini(
@@ -195,13 +275,19 @@ async function sendToClaude(
 }
 
 // Envía la conversación (ya anonimizada) al motor configurado y devuelve la
-// respuesta completa. onText recibe el texto acumulado (streaming en Claude;
-// en Gemini llega de una vez al final).
+// respuesta completa (siempre seudonimizada). onText recibe el texto
+// acumulado según se genera. mapping (token -> dato real) solo lo usa el
+// motor local, que rehidrata en el dispositivo para trabajar con texto
+// natural; los motores remotos jamás lo reciben.
 export async function sendToAI(
   messages: AIMessage[],
-  onText?: (accumulated: string) => void
+  onText?: (accumulated: string) => void,
+  mapping?: Record<string, string>
 ): Promise<string> {
   const config = getAIConfig();
+  if (config.provider === 'local') {
+    return sendToLocal(messages, config, onText, mapping);
+  }
   if (config.provider === 'gemini') {
     if (!config.geminiKey) {
       throw new Error('Configura tu clave gratuita de Gemini en los ajustes (⚙️)');

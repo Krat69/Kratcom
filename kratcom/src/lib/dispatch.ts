@@ -1,5 +1,6 @@
 import type { Task } from '@/types';
 import { isAIConfigured, sendToAI } from '@/lib/ai';
+import { loadMapping } from '@/lib/vault';
 
 // Frontera de salida de la aplicación: esta es la ÚNICA función que envía
 // contenido de tareas fuera del dispositivo, y solo recibe el objeto Task,
@@ -54,7 +55,10 @@ export async function dispatchTask(task: Task): Promise<DispatchResult> {
   const endpoint = getEndpoint();
 
   if (isAIConfigured()) {
-    const responseText = await sendToAI([{ role: 'user', content: payload }]);
+    // El mapeo solo lo usa el motor 100% local (rehidratación en el propio
+    // dispositivo); los motores remotos nunca lo reciben.
+    const mapping = (await loadMapping(task.id)) ?? undefined;
+    const responseText = await sendToAI([{ role: 'user', content: payload }], undefined, mapping);
     return { method: 'ai', detail: 'Procesada por la IA', responseText };
   }
 
