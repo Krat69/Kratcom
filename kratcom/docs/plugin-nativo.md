@@ -44,7 +44,7 @@ Decisiones que conviene conocer:
 | La librería arm64 enlaza | CMake + NDK r27c → `libkratcom_llama.so`, ELF aarch64 |
 | Los cinco símbolos JNI se exportan | `llvm-nm -D` sobre el `.so` |
 | Alineación de páginas de 16 KB (la exige Google Play) | `llvm-readelf -l` → `LOAD align 0x4000` |
-| **La inferencia funciona de verdad** | Arnés nativo con Qwen 2.5 0.5B: responde «Paris» a la capital de Francia, corta sola por EOG, la segunda generación no arrastra la anterior, y la cancelación devuelve 1 conservando el texto |
+| **La inferencia funciona de verdad** | `test/` — arnés con Qwen 2.5 0.5B: responde «Paris» a la capital de Francia, corta sola por EOG, la segunda generación no arrastra la anterior, y la cancelación devuelve 1 conservando el texto. Reproducible: ver `test/README.md` |
 | El APK integra el plugin | `gradlew assembleDebug` con el plugin sincronizado, también en CI |
 
 **Lo que no está verificado: iOS.** El código Swift usa exactamente la misma fachada C que sí se ha probado, pero compilarlo requiere macOS con Xcode. Antes de abrir el proyecto hay que generar el framework una vez:
