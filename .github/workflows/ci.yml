@@ -21,11 +21,12 @@ jobs:
           cache: npm
           cache-dependency-path: kratcom/package-lock.json
 
-      # --no-optional: node-llama-cpp compila binarios nativos y solo hace
-      # falta para el motor de escritorio. Lo que se verifica aquí es la
-      # lógica compartida, que no depende de él.
+      # Instalación completa a propósito. --omit=optional parecería razonable
+      # para saltarse node-llama-cpp (solo hace falta en el escritorio), pero
+      # también se lleva por delante los binarios de rolldown, de los que
+      # depende vitest: son dependencias opcionales igualmente.
       - name: Instalar dependencias
-        run: npm ci --no-optional
+        run: npm ci
         working-directory: kratcom
 
       - name: Comprobar tipos
@@ -58,7 +59,7 @@ jobs:
           java-version: 21
 
       - name: Instalar dependencias
-        run: npm ci --no-optional
+        run: npm ci
         working-directory: kratcom
 
       - name: Compilar y sincronizar con Android
