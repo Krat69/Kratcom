@@ -20,10 +20,22 @@ export interface AIConfig {
   anthropicModel: string;
 }
 
+// Modelos GGUF oficiales servidos desde Hugging Face (solo DESCARGA de pesos
+// públicos: ningún dato del usuario viaja en esa petición). Se cachean en el
+// navegador tras la primera descarga.
 export const LOCAL_MODELS = [
-  { id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC', label: 'Llama 3.2 1B (~0,9 GB, recomendado)' },
-  { id: 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC', label: 'Qwen 2.5 1.5B (~1,6 GB, mejor calidad)' },
-  { id: 'Llama-3.2-3B-Instruct-q4f16_1-MLC', label: 'Llama 3.2 3B (~2,3 GB, móviles potentes)' },
+  {
+    id: 'qwen2.5-0.5b',
+    label: 'Qwen 2.5 0.5B (~470 MB — cualquier móvil)',
+    sizeLabel: '470 MB',
+    url: 'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf',
+  },
+  {
+    id: 'qwen2.5-1.5b',
+    label: 'Qwen 2.5 1.5B (~1,1 GB — móviles potentes)',
+    sizeLabel: '1,1 GB',
+    url: 'https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf',
+  },
 ];
 
 export const GEMINI_MODELS = [
@@ -39,7 +51,7 @@ export const ANTHROPIC_MODELS = [
 
 const DEFAULTS: AIConfig = {
   provider: 'local',
-  localModel: 'Llama-3.2-1B-Instruct-q4f16_1-MLC',
+  localModel: 'qwen2.5-0.5b',
   geminiKey: '',
   geminiModel: 'gemini-2.5-flash',
   anthropicKey: '',
@@ -83,9 +95,10 @@ export function isAIConfigured(): boolean {
   return config.provider === 'gemini' ? !!config.geminiKey : !!config.anthropicKey;
 }
 
-// ¿Soporta este navegador la IA 100% local (WebGPU)?
+// ¿Soporta este navegador la IA 100% local? (WebAssembly: cualquier
+// navegador moderno de móvil u ordenador lo tiene)
 export function isLocalAISupported(): boolean {
-  return typeof navigator !== 'undefined' && 'gpu' in navigator;
+  return typeof WebAssembly !== 'undefined';
 }
 
 const SYSTEM_PROMPT = `Eres el asistente de KratCom, una interfaz privada de IA. El dispositivo del usuario seudonimiza los datos personales antes de enviarte nada: los tokens con formato [[TIPO_n]] (por ejemplo [[PERSONA_1]], [[DNI_2]], [[IBAN_1]]) sustituyen nombres, identificadores, cuentas, direcciones y otros datos personales reales que tú nunca conoces.
@@ -114,16 +127,21 @@ export function buildManualPayload(anonymizedText: string): string {
   );
 }
 
-// Motor 100% local (WebLLM + WebGPU): el modelo se descarga una vez, se
-// cachea en el navegador y la inferencia ocurre íntegramente en el
-// dispositivo. Como nada sale del teléfono, trabaja con los datos REALES
-// (rehidratados con el mapeo) — un modelo pequeño se maneja mejor con texto
-// natural que con tokens — y la respuesta se vuelve a seudonimizar antes de
-// devolverla, para que el almacenamiento siga sin datos en claro.
+// Motor 100% local (wllama: llama.cpp compilado a WebAssembly). Corre por
+// CPU en cualquier navegador moderno — sin WebGPU, sin requisitos de
+// hardware. El modelo se descarga una vez, se cachea en el navegador y la
+// inferencia ocurre íntegramente en el dispositivo. Como nada sale del
+// teléfono, trabaja con los datos REALES (rehidratados con el mapeo) — un
+// modelo pequeño se maneja mejor con texto natural que con tokens — y la
+// respuesta se vuelve a seudonimizar antes de devolverla, para que el
+// almacenamiento siga sin datos en claro.
 const LOCAL_SYSTEM_PROMPT =
   'Eres un asistente útil, claro y conciso. Responde siempre en el idioma del usuario (normalmente español).';
 
-let localEngine: { model: string; engine: { chat: { completions: { create: Function } }; unload?: () => Promise<void> } } | null = null;
+// Límite prudente para el contexto reducido del modelo local (n_ctx 2048)
+const LOCAL_MAX_CHARS = 6000;
+
+let localEngine: { modelId: string; wllama: InstanceType<typeof import('@wllama/wllama').Wllama> } | null = null;
 
 async function sendToLocal(
   messages: AIMessage[],
@@ -133,13 +151,15 @@ async function sendToLocal(
 ): Promise<string> {
   if (!isLocalAISupported()) {
     throw new Error(
-      'Este navegador no soporta la IA local (WebGPU). En iPhone necesitas iOS 26 o superior; en Android, Chrome actualizado. Alternativa: motor Gemini (gratis) en ajustes.'
+      'Este navegador no soporta WebAssembly, necesario para la IA local. Alternativa: motor Gemini (gratis) en ajustes.'
     );
   }
 
-  if (localEngine && localEngine.model !== config.localModel) {
+  const model = LOCAL_MODELS.find(m => m.id === config.localModel) ?? LOCAL_MODELS[0];
+
+  if (localEngine && localEngine.modelId !== model.id) {
     try {
-      await localEngine.engine.unload?.();
+      await localEngine.wllama.exit();
     } catch {
       // sin consecuencias: se crea un motor nuevo
     }
@@ -147,25 +167,39 @@ async function sendToLocal(
   }
 
   if (!localEngine) {
-    const webllm = await import('@mlc-ai/web-llm');
-    const engine = await webllm.CreateMLCEngine(config.localModel, {
-      initProgressCallback: progress => {
-        const percent = Math.round((progress.progress ?? 0) * 100);
+    onText?.('⏳ Preparando la IA local…');
+    const [{ Wllama }, { default: wasmUrl }] = await Promise.all([
+      import('@wllama/wllama'),
+      import('@wllama/wllama/esm/wasm/wllama.wasm?url'),
+    ]);
+    const wllama = new Wllama({ default: wasmUrl }, { suppressNativeLog: true });
+    await wllama.loadModelFromUrl(model.url, {
+      n_ctx: 2048,
+      progressCallback: ({ loaded, total }) => {
+        const percent = total ? Math.round((loaded / total) * 100) : 0;
         onText?.(
-          `⏳ Preparando la IA local… ${percent}%\n(la primera vez descarga el modelo; después queda guardado en el dispositivo)`
+          `⏳ Descargando el modelo local… ${percent}%\n(~${model.sizeLabel}, solo la primera vez; después queda guardado en el dispositivo)`
         );
       },
     });
-    localEngine = { model: config.localModel, engine };
+    localEngine = { modelId: model.id, wllama };
   }
 
-  const rehydrated = mapping
+  const prepared = (mapping
     ? messages.map(m => ({ ...m, content: deanonymize(m.content, mapping) }))
-    : messages;
+    : [...messages]
+  ).map(m =>
+    m.content.length > LOCAL_MAX_CHARS
+      ? { ...m, content: m.content.slice(0, LOCAL_MAX_CHARS) + '\n[…texto recortado para el modelo local…]' }
+      : m
+  );
 
-  const chunks = await localEngine.engine.chat.completions.create({
-    messages: [{ role: 'system', content: LOCAL_SYSTEM_PROMPT }, ...rehydrated],
+  onText?.('⏳ Pensando…');
+  const chunks = await localEngine.wllama.createChatCompletion({
+    messages: [{ role: 'system', content: LOCAL_SYSTEM_PROMPT }, ...prepared],
     stream: true,
+    max_tokens: 800,
+    temperature: 0.7,
   });
 
   let accumulated = '';
