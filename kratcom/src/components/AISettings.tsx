@@ -78,17 +78,16 @@ export function AISettings({ onClose }: AISettingsProps) {
             </div>
             {!isLocalAISupported() && (
               <p className="text-xs text-amber-300 bg-amber-900/30 border border-amber-800 rounded-lg p-2">
-                ⚠️ Este navegador no soporta WebGPU, necesario para la IA local. En iPhone:
-                iOS 26 o superior. En Android: Chrome actualizado. Mientras tanto puedes usar
+                ⚠️ Este navegador no soporta WebAssembly, necesario para la IA local. Puedes usar
                 Gemini (gratis).
               </p>
             )}
             <p className="text-xs text-gray-500">
-              La IA se ejecuta íntegramente en tu dispositivo: sin clave, sin coste y sin que
-              salga ningún dato — ni siquiera anonimizado. El primer uso descarga el modelo
-              (recomendable con wifi); después queda guardado. Es un modelo pequeño: útil para
-              resúmenes, borradores y preguntas directas; para trabajo complejo, Gemini o Claude
-              dan mejor resultado.
+              Funciona en cualquier móvil moderno, por CPU: sin clave, sin coste y sin que salga
+              ningún dato — ni siquiera anonimizado. El primer uso descarga el modelo (mejor con
+              wifi); después queda guardado. Es un modelo pequeño y responde despacio en móviles
+              antiguos: útil para resúmenes, borradores y preguntas directas; para trabajo
+              complejo, Gemini o Claude dan mejor resultado.
             </p>
           </>
         ) : config.provider === 'gemini' ? (

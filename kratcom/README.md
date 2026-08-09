@@ -31,7 +31,7 @@ El flujo está diseñado para que **ningún dato personal abandone el dispositiv
 
 Tres motores seleccionables en ajustes (⚙️):
 
-- **En tu móvil (100 % local, por defecto)**: WebLLM + WebGPU ejecuta un modelo pequeño (Llama 3.2 1B/3B, Qwen 2.5 1.5B) íntegramente en el dispositivo. Sin clave, sin coste y sin que salga ningún dato — ni siquiera anonimizado. El primer uso descarga el modelo (~0,9–2,3 GB, cacheado). Requiere WebGPU (iOS 26+/Chrome Android). Con este motor la app rehidrata los datos en el dispositivo para la inferencia y vuelve a seudonimizar la respuesta antes de guardarla.
+- **En tu móvil (100 % local, por defecto)**: wllama (llama.cpp compilado a WebAssembly) ejecuta un modelo pequeño (Qwen 2.5 0.5B/1.5B) íntegramente en el dispositivo, **por CPU y en cualquier navegador moderno** — sin WebGPU ni requisitos de hardware. Sin clave, sin coste y sin que salga ningún dato — ni siquiera anonimizado. El primer uso descarga el modelo (~470 MB el estándar; cacheado). Con este motor la app rehidrata los datos en el dispositivo para la inferencia y vuelve a seudonimizar la respuesta antes de guardarla.
 - **Google Gemini**: automático y gratuito (franja gratuita, clave sin tarjeta en aistudio.google.com/apikey).
 - **Claude (Anthropic)**: máxima calidad, SDK oficial con streaming, pago por uso.
 
