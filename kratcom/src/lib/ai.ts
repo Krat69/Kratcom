@@ -56,6 +56,18 @@ export interface AIMessage {
   content: string;
 }
 
+// Texto para el modo manual (sin clave de API): el usuario lo pega en su
+// app de Claude. Si hay tokens, se añade la instrucción de conservarlos.
+export function buildManualPayload(anonymizedText: string): string {
+  const hasTokens = /\[\[[A-Z_]+_\d+\]\]/.test(anonymizedText);
+  if (!hasTokens) return anonymizedText;
+  return (
+    anonymizedText +
+    '\n\n(NOTA: los tokens con formato [[TIPO_n]] sustituyen datos personales ' +
+    'seudonimizados en mi dispositivo. Consérvalos EXACTAMENTE igual en tu respuesta.)'
+  );
+}
+
 // Envía la conversación (ya anonimizada) y devuelve la respuesta completa.
 // onText recibe el texto acumulado según llega el streaming.
 export async function sendToAI(

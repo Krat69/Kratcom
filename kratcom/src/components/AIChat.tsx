@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { ChatMessage, Conversation, CustomTerm } from '@/types';
 import { createAnonymizer } from '@/lib/anonymizer';
 import { extractText } from '@/lib/extractText';
-import { isAIConfigured, sendToAI } from '@/lib/ai';
+import { buildManualPayload, isAIConfigured, sendToAI } from '@/lib/ai';
 import { loadCustomTerms, loadMapping, saveMapping } from '@/lib/vault';
 import { TokenText } from '@/components/TokenText';
 import {
@@ -41,6 +41,11 @@ export function AIChat({
   const [revealed, setRevealed] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Modo manual (sin clave de API): payload anonimizado pendiente de llevar
+  // a la app de Claude, y respuesta pegada por el usuario.
+  const [manualPayload, setManualPayload] = useState<string | null>(null);
+  const [manualResponse, setManualResponse] = useState('');
+  const [manualNotice, setManualNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -68,7 +73,7 @@ export function AIChat({
 
   const handleSend = async () => {
     const trimmed = input.trim();
-    if ((!trimmed && !attachment) || busy) return;
+    if ((!trimmed && !attachment) || busy || manualPayload) return;
     setError(null);
     setBusy(true);
 
@@ -94,6 +99,14 @@ export function AIChat({
       appendMessage(conversation.id, userMessage);
       setInput('');
       setAttachment(null);
+
+      // Sin clave de API: modo manual — se prepara el texto anonimizado para
+      // copiarlo/compartirlo a la app de Claude del usuario.
+      if (!isAIConfigured()) {
+        setManualPayload(buildManualPayload(anonymized));
+        setManualNotice(null);
+        return;
+      }
 
       const assistantId = `${Date.now()}-a`;
       appendMessage(conversation.id, {
@@ -122,6 +135,35 @@ export function AIChat({
     } finally {
       setBusy(false);
     }
+  };
+
+  const handleManualCopy = async () => {
+    if (!manualPayload) return;
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: manualPayload });
+        setManualNotice('Compartido. Cuando Claude responda, pega su respuesta abajo.');
+      } else {
+        await navigator.clipboard.writeText(manualPayload);
+        setManualNotice('Copiado. Pégalo en tu app de Claude y trae aquí su respuesta.');
+      }
+    } catch {
+      // el usuario canceló el diálogo de compartir
+    }
+  };
+
+  const handleManualSave = () => {
+    const text = manualResponse.trim();
+    if (!text) return;
+    appendMessage(conversation.id, {
+      id: `${Date.now()}-a`,
+      role: 'assistant',
+      text,
+      timestamp: new Date().toISOString(),
+    });
+    setManualPayload(null);
+    setManualResponse('');
+    setManualNotice(null);
   };
 
   const protectedCount = Object.keys(mapping).length;
@@ -196,13 +238,55 @@ export function AIChat({
         <div ref={messagesEndRef} />
       </div>
 
-      {!isAIConfigured() && (
-        <div className="mx-4 mb-2 p-3 bg-amber-900/40 border border-amber-700 rounded-lg text-sm text-amber-200">
-          Falta la clave de API de Anthropic.{' '}
-          <button onClick={onOpenSettings} className="underline font-medium">
-            Configúrala en ajustes
-          </button>{' '}
-          — se guarda solo en este dispositivo.
+      {!isAIConfigured() && !manualPayload && (
+        <div className="mx-4 mb-2 p-3 bg-gray-900 border border-gray-700 rounded-lg text-xs text-gray-300">
+          <span className="font-medium text-gray-200">Modo manual (gratis):</span> al enviar, tu
+          mensaje se anonimiza y se copia para pegarlo en tu app de Claude; luego traes aquí su
+          respuesta. Para respuestas automáticas,{' '}
+          <button onClick={onOpenSettings} className="underline">
+            configura una clave de API
+          </button>
+          .
+        </div>
+      )}
+
+      {manualPayload && (
+        <div className="mx-4 mb-2 p-3 bg-gray-900 border border-blue-800 rounded-lg space-y-2">
+          <p className="text-sm text-gray-200 font-medium">
+            Mensaje anonimizado listo — sin clave de API, el envío es en 2 pasos:
+          </p>
+          <button
+            onClick={() => void handleManualCopy()}
+            className="w-full px-3 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-sm font-medium"
+          >
+            1 · Copiar / compartir a tu app de Claude
+          </button>
+          {manualNotice && <p className="text-xs text-green-300">{manualNotice}</p>}
+          <textarea
+            value={manualResponse}
+            onChange={e => setManualResponse(e.target.value)}
+            placeholder="2 · Pega aquí la respuesta de Claude (con los tokens [[TIPO_n]] intactos)"
+            rows={3}
+            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={handleManualSave}
+              disabled={!manualResponse.trim()}
+              className="flex-1 px-3 py-2 bg-green-700 hover:bg-green-600 disabled:opacity-50 rounded-lg text-white text-sm font-medium"
+            >
+              Guardar respuesta
+            </button>
+            <button
+              onClick={() => {
+                setManualPayload(null);
+                setManualNotice(null);
+              }}
+              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 text-sm"
+            >
+              Cancelar
+            </button>
+          </div>
         </div>
       )}
 
@@ -253,7 +337,7 @@ export function AIChat({
           />
           <button
             onClick={() => void handleSend()}
-            disabled={busy || (!input.trim() && !attachment)}
+            disabled={busy || !!manualPayload || (!input.trim() && !attachment)}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors duration-150"
             aria-label="Enviar"
           >
