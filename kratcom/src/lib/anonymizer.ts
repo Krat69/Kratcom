@@ -314,6 +314,18 @@ export function deanonymize(text: string, mapping: Record<string, string>): stri
   return text.replace(TOKEN_REGEX, match => mapping[match] ?? match);
 }
 
+// Operación inversa: vuelve a sustituir los valores reales por sus tokens.
+// Se usa con el motor 100% local, que trabaja con datos reales (nunca salen
+// del dispositivo) pero cuya respuesta debe guardarse seudonimizada.
+export function reapplyTokens(text: string, mapping: Record<string, string>): string {
+  const entries = Object.entries(mapping).sort((a, b) => b[1].length - a[1].length);
+  let result = text;
+  for (const [token, value] of entries) {
+    if (value.length >= 2) result = result.split(value).join(token);
+  }
+  return result;
+}
+
 export function tokenType(token: string): PiiType {
   const m = /\[\[([A-Z_]+)_\d+\]\]/.exec(token);
   return (m ? m[1] : 'PROTEGIDO') as PiiType;

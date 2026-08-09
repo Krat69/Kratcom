@@ -27,9 +27,15 @@ El flujo está diseñado para que **ningún dato personal abandone el dispositiv
 
 > Nota: la detección es heurística y prioriza redactar de más antes que filtrar de menos. En las tareas privadas hay revisión obligatoria antes de enviar; añade como «término protegido» cualquier dato que el motor no reconozca.
 
-## Configuración
+## Motores de IA
 
-Abre los ajustes (⚙️ en la barra lateral) e introduce tu clave de API de Anthropic (se guarda solo en el dispositivo). Modelo por defecto: Claude Opus 5. Para las tareas también puede configurarse un webhook alternativo; sin IA ni webhook, la tarea anonimizada se comparte o copia manualmente.
+Tres motores seleccionables en ajustes (⚙️):
+
+- **En tu móvil (100 % local, por defecto)**: WebLLM + WebGPU ejecuta un modelo pequeño (Llama 3.2 1B/3B, Qwen 2.5 1.5B) íntegramente en el dispositivo. Sin clave, sin coste y sin que salga ningún dato — ni siquiera anonimizado. El primer uso descarga el modelo (~0,9–2,3 GB, cacheado). Requiere WebGPU (iOS 26+/Chrome Android). Con este motor la app rehidrata los datos en el dispositivo para la inferencia y vuelve a seudonimizar la respuesta antes de guardarla.
+- **Google Gemini**: automático y gratuito (franja gratuita, clave sin tarjeta en aistudio.google.com/apikey).
+- **Claude (Anthropic)**: máxima calidad, SDK oficial con streaming, pago por uso.
+
+Con los motores remotos, la IA solo recibe texto seudonimizado. Sin ningún motor configurado, queda el modo manual (copiar/pegar anonimizado). Para las tareas también puede configurarse un webhook alternativo.
 
 ## Instalación
 

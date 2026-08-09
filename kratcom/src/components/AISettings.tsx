@@ -3,7 +3,9 @@ import {
   AIProvider,
   ANTHROPIC_MODELS,
   GEMINI_MODELS,
+  LOCAL_MODELS,
   getAIConfig,
+  isLocalAISupported,
   setAIConfig,
 } from '@/lib/ai';
 import { getEndpoint, setEndpoint } from '@/lib/dispatch';
@@ -50,12 +52,46 @@ export function AISettings({ onClose }: AISettingsProps) {
           </button>
         </div>
 
-        <div className="flex gap-2">
-          {providerButton('gemini', 'Google Gemini', 'Gratis (franja gratuita)')}
-          {providerButton('anthropic', 'Claude', 'Mejor calidad · céntimos/uso')}
+        <div className="flex flex-col gap-2">
+          {providerButton('local', 'En tu móvil (100% local)', 'Gratis · sin clave · nada sale del dispositivo')}
+          <div className="flex gap-2">
+            {providerButton('gemini', 'Google Gemini', 'Gratis (franja gratuita)')}
+            {providerButton('anthropic', 'Claude', 'Mejor calidad · céntimos/uso')}
+          </div>
         </div>
 
-        {config.provider === 'gemini' ? (
+        {config.provider === 'local' ? (
+          <>
+            <div>
+              <label className="block text-sm text-gray-300 mb-1">Modelo local</label>
+              <select
+                value={config.localModel}
+                onChange={e => setConfig({ ...config, localModel: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {LOCAL_MODELS.map(model => (
+                  <option key={model.id} value={model.id}>
+                    {model.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {!isLocalAISupported() && (
+              <p className="text-xs text-amber-300 bg-amber-900/30 border border-amber-800 rounded-lg p-2">
+                ⚠️ Este navegador no soporta WebGPU, necesario para la IA local. En iPhone:
+                iOS 26 o superior. En Android: Chrome actualizado. Mientras tanto puedes usar
+                Gemini (gratis).
+              </p>
+            )}
+            <p className="text-xs text-gray-500">
+              La IA se ejecuta íntegramente en tu dispositivo: sin clave, sin coste y sin que
+              salga ningún dato — ni siquiera anonimizado. El primer uso descarga el modelo
+              (recomendable con wifi); después queda guardado. Es un modelo pequeño: útil para
+              resúmenes, borradores y preguntas directas; para trabajo complejo, Gemini o Claude
+              dan mejor resultado.
+            </p>
+          </>
+        ) : config.provider === 'gemini' ? (
           <>
             <div>
               <label className="block text-sm text-gray-300 mb-1">Clave gratuita de Gemini</label>
@@ -145,9 +181,9 @@ export function AISettings({ onClose }: AISettingsProps) {
         <div className="flex items-start bg-green-900/40 border border-green-700 rounded-lg p-3 text-xs text-green-200">
           <ShieldIcon className="w-4 h-4 mr-2 flex-shrink-0 mt-0.5" />
           <p>
-            Con cualquiera de los dos motores, la IA solo recibe texto seudonimizado: los datos
-            personales se sustituyen por tokens en tu dispositivo y los valores reales quedan
-            cifrados aquí.
+            Con el motor local, nada sale del dispositivo — ni siquiera texto anonimizado. Con
+            Gemini o Claude, la IA solo recibe texto seudonimizado: los datos personales se
+            sustituyen por tokens en tu dispositivo y los valores reales quedan cifrados aquí.
           </p>
         </div>
 
