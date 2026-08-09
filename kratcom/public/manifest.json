@@ -1,15 +1,14 @@
-
 {
   "short_name": "KratCom",
-  "name": "KratCom - Your Team's Communication Hub",
+  "name": "KratCom - Interfaz privada de IA",
   "icons": [
     {
-      "src": "/icon-192x192.png",
+      "src": "icon-192x192.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "icon-512x512.png",
       "type": "image/png",
       "sizes": "512x512"
     }

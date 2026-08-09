@@ -1,0 +1,53 @@
+name: Desplegar en GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+      - claude/mobile-tasks-local-privacy-gv41w9
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: kratcom/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+        working-directory: kratcom
+
+      - name: Compilar
+        run: npm run build
+        working-directory: kratcom
+        env:
+          BASE_PATH: /Kratcom/
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: kratcom/dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
