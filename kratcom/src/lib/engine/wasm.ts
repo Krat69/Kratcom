@@ -15,19 +15,10 @@ import type {
 // El fichero .wasm se empaqueta con la app (import ?url) en lugar de traerse
 // de un CDN: así la app arranca sin red una vez instalada.
 import wllamaWasmUrl from '@wllama/wllama/esm/wasm/wllama.wasm?url';
+import { estimateTokens } from '@/lib/engine/tokens';
 
 type WllamaInstance = import('@wllama/wllama').Wllama;
 
-/**
- * Aproximación al número de tokens. wllama 3.5 no expone el tokenizador, y
- * para lo único que necesitamos esta cifra —repartir el presupuesto de
- * contexto entre memoria, diarios e historial— una estimación conservadora
- * basta. En español, un token ronda los 3,6 caracteres; redondeamos a la baja
- * para sobreestimar el gasto y no desbordar la ventana.
- */
-export function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 3.4);
-}
 
 export class WasmEngine implements LocalEngine {
   readonly kind = 'wasm' as const;

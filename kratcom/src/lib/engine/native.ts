@@ -7,7 +7,7 @@ import type {
   LocalEngine,
   ModelSpec,
 } from '@/lib/engine/types';
-import { estimateTokens } from '@/lib/engine/wasm';
+import { estimateTokens } from '@/lib/engine/tokens';
 import { ensureModelFile } from '@/lib/engine/download';
 
 // Motor nativo: llama.cpp compilado para la plataforma. Multiplica por 3-5 la

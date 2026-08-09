@@ -1,6 +1,6 @@
 import { allEntries, type MemoryDoc } from '@/lib/memory/parse';
 import { normalizeFact } from '@/lib/memory/merge';
-import { estimateTokens } from '@/lib/engine/wasm';
+import { estimateTokens } from '@/lib/engine/tokens';
 
 // Construcción del contexto que se le pasa al modelo en cada turno.
 //

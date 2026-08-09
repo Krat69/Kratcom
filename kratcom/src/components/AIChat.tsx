@@ -31,6 +31,13 @@ const SYSTEM_PROMPT =
 // así que solo viajan los últimos turnos: lo anterior ya vive en la memoria.
 const HISTORY_TURNS = 6;
 
+// Cada motor señala la cancelación a su manera: DOMException del navegador,
+// error corriente del puente nativo.
+function isAbort(err: unknown): boolean {
+  if (err instanceof DOMException && err.name === 'AbortError') return true;
+  return err instanceof Error && /abort|cancel/i.test(err.message);
+}
+
 export function AIChat({
   conversation,
   appendMessage,
@@ -94,6 +101,9 @@ export function AIChat({
     setAttachment(null);
 
     const assistantId = `${Date.now()}-a`;
+    // Texto recibido hasta ahora en este turno. Hace falta aparte del estado
+    // de React porque el cierre de `handleSend` no ve las actualizaciones.
+    let streamed = '';
     appendMessage(conversation.id, {
       id: assistantId,
       role: 'assistant',
@@ -119,7 +129,10 @@ export function AIChat({
         {
           maxTokens: 640,
           signal: controller.signal,
-          onToken: accumulated => updateMessage(conversation.id, assistantId, accumulated),
+          onToken: accumulated => {
+            streamed = accumulated;
+            updateMessage(conversation.id, assistantId, accumulated);
+          },
         }
       );
       updateMessage(conversation.id, assistantId, answer);
@@ -147,8 +160,15 @@ export function AIChat({
           });
       }
     } catch (err) {
-      removeMessage(conversation.id, assistantId);
-      setError(err instanceof Error ? err.message : 'No se pudo generar la respuesta');
+      // Parar no es un error: el usuario ha decidido cortar, y lo que ya se
+      // había escrito se queda en pantalla. Solo se retira el mensaje si la
+      // generación falló de verdad y no llegó a producir nada.
+      if (isAbort(err)) {
+        if (!streamed.trim()) removeMessage(conversation.id, assistantId);
+      } else {
+        removeMessage(conversation.id, assistantId);
+        setError(err instanceof Error ? err.message : 'No se pudo generar la respuesta');
+      }
     } finally {
       abortRef.current = null;
       setBusy(false);
