@@ -28,6 +28,26 @@ antes de meter dentro las conversaciones del despacho:
 Recomendación: empezar con un canal interno no crítico durante unas semanas antes de mover ahí
 nada que tenga que ver con expedientes de clientes.
 
+### Acceso al contenido: en Cratias, todo el equipo ve todos los expedientes
+
+Es la política acordada para el despacho, y coincide con el comportamiento por defecto de Buzz.
+
+Los canales son `open` o `private` (`crates/buzz-core/src/channel.rs`). Un canal **`open` es
+buscable y cualquier miembro del relay entra sin invitación**; `private` queda oculto y requiere
+invitación. Al crear un canal la app parte de `open`, y `private` es una casilla que hay que marcar
+a propósito (`ChannelManagementSheet.tsx`).
+
+Por tanto, para que todo el equipo vea todo: **crear los canales sin marcar privado**. No hace
+falta ninguna configuración adicional.
+
+La única puerta de acceso real al contenido es entonces **el listado de miembros del relay**, que
+se gestiona con `./run.sh add-member` y `./run.sh remove-member`. De ahí que dar de baja a quien
+sale del despacho sea la medida que de verdad importa.
+
+Esto es **independiente** del ajuste `Respond to` de la sección siguiente: mantener los agentes en
+`Only me` no le resta a nadie el acceso a ningún expediente. Son dos palancas distintas y no se
+estorban.
+
 ### Los agentes se ejecutan en el portátil, no en el servidor
 
 Conviene tenerlo claro antes de repartir la app por el despacho, porque es el punto donde Buzz
