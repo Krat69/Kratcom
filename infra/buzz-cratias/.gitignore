@@ -1,0 +1,4 @@
+# Salvaguarda: si alguien ejecuta bootstrap.sh dentro de esta carpeta,
+# el fichero de secretos no debe llegar nunca a git.
+.env
+*.pem
