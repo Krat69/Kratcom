@@ -28,6 +28,42 @@ antes de meter dentro las conversaciones del despacho:
 Recomendación: empezar con un canal interno no crítico durante unas semanas antes de mover ahí
 nada que tenga que ver con expedientes de clientes.
 
+### Los agentes se ejecutan en el portátil, no en el servidor
+
+Conviene tenerlo claro antes de repartir la app por el despacho, porque es el punto donde Buzz
+toca ficheros reales.
+
+**El relay del VPS no alcanza a los ordenadores del despacho.** Solo almacena y reparte eventos
+firmados; la conexión la abre siempre el portátil hacia el servidor, nunca al revés.
+
+**Los agentes de IA, en cambio, se ejecutan en la máquina de quien los crea**, no en el relay
+(`desktop/src-tauri/src/managed_agents/`, «local spawn»). Tienen una herramienta de shell que
+ejecuta órdenes de verdad — por eso el README oficial exige Git for Windows: la app resuelve Git
+Bash en tiempo de ejecución. Por defecto trabajan en un espacio propio (`~/.buzz`, el «nest»), pero
+el usuario puede apuntarlos a carpetas locales existentes mediante `repos_dir`. No hay
+confinamiento general: existe algún aislamiento heredado del harness concreto (Codex usa Seatbelt
+en macOS), pero no es una garantía del producto.
+
+**El ajuste crítico es «Respond to»**, que decide quién puede dar órdenes a un agente:
+
+| Opción | Efecto |
+|---|---|
+| `Only me` (por defecto) | Solo el dueño y sus propios agentes verificados |
+| `Anyone` | Cualquiera del relay puede instruirlo |
+| `Selected people` | Una lista concreta de personas |
+
+Las dos últimas, en palabras del propio código, «comparten el acceso del anfitrión con alguien que
+no es él»: un mensaje en un canal pasa a ejecutar órdenes en el ordenador de quien creó el agente.
+El candado de compilación que fuerza `owner-only` (`BUZZ_BUILD_AGENT_ACCESS_OWNER_ONLY`) **no está
+activado en la build pública** — solo aparece en recetas de test del `Justfile` —, así que en la
+versión que se descarga las tres opciones funcionan.
+
+Reglas mínimas para el despacho:
+
+1. **Nadie cambia `Only me`.** Que conste por escrito.
+2. **No apuntar agentes a carpetas con expedientes.** Que trabajen en su nest aislado.
+3. Mantener el relay cerrado y dar de baja a quien salga del despacho.
+
 ### Nota de protección de datos
 
 Si en Buzz se van a tratar datos de clientes, el servidor es un tratamiento más:
